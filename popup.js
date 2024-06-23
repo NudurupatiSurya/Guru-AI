@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const chatbotTab = document.getElementById('chatbot-tab');
     const talkTab = document.getElementById('talk-tab');
-    const settingsTab = document.getElementById('settings-tab');
+    const transcriptTab = document.getElementById('transcript-tab');
     const content = document.getElementById('content');
     const sendButton = document.getElementById('send-button');
     const textInput = document.getElementById('text-input');
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function () {
         footer.style.display = 'flex';
         voiceFooter.style.display = 'none';
         setActiveTab(chatbotTab);
-        displayGreetingMessage();
+        checkIfYouTubeTab();
         loadConversation();
     }
 
@@ -35,12 +35,13 @@ document.addEventListener('DOMContentLoaded', function () {
         connectWebSocket();
     }
 
-    function loadSettings() {
-        currentTab = 'settings';
-        content.innerHTML = `<h2>Settings</h2><p>Welcome to the settings interface.</p>`;
-        footer.style.display = 'flex';
+    function loadTranscript() {
+        currentTab = 'transcript';
+        content.innerHTML = `<h2>Video Transcript</h2><p>Loading transcript...</p>`;
+        footer.style.display = 'none';
         voiceFooter.style.display = 'none';
-        setActiveTab(settingsTab);
+        setActiveTab(transcriptTab);
+        fetchTranscript();
     }
 
     function setActiveTab(tab) {
@@ -50,11 +51,17 @@ document.addEventListener('DOMContentLoaded', function () {
         tab.classList.add('selected');
     }
 
-    function displayGreetingMessage() {
+    function checkIfYouTubeTab() {
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+            const tabUrl = tabs[0].url;
             const tabTitle = tabs[0].title;
-            const greetingMessage = `<p><strong>Chatbot:</strong> Hello! Do you have any questions about "${tabTitle}"? If yes, please ask!</p>`;
-            content.innerHTML += greetingMessage;
+            if (tabUrl.includes("youtube.com/watch?v=")) {
+                const youTubeMessage = `<p><strong>Chatbot:</strong> You are currently watching "${tabTitle}" on YouTube. Do you have any questions about this video?</p>`;
+                content.innerHTML += youTubeMessage;
+            } else {
+                const greetingMessage = `<p><strong>Chatbot:</strong> Hello! Do you have any questions about "${tabTitle}"? If yes, please ask!</p>`;
+                content.innerHTML += greetingMessage;
+            }
         });
     }
 
@@ -227,6 +234,29 @@ document.addEventListener('DOMContentLoaded', function () {
         content.appendChild(talkMessage);
     }
 
+    async function fetchTranscript() {
+        chrome.tabs.query({ active: true, currentWindow: true }, async function (tabs) {
+            const tabUrl = tabs[0].url;
+            const videoId = tabUrl.split('v=')[1].split('&')[0];
+            try {
+                const response = await fetch(`http://localhost:8080/https://transcript-fe.vercel.app/api/transcript/${videoId}`);
+                const transcriptData = await response.json();
+                displayTranscript(transcriptData);
+            } catch (error) {
+                content.innerHTML = `<h2>Video Transcript</h2><p>Error fetching transcript: ${error.message}</p>`;
+            }
+        });
+    }
+
+    function displayTranscript(transcriptData) {
+        content.innerHTML = `<h2>Video Transcript</h2>`;
+        transcriptData.forEach((item) => {
+            const transcriptItem = document.createElement('p');
+            transcriptItem.innerHTML = `${item.text} <small>(${item.start} - ${item.duration})</small>`;
+            content.appendChild(transcriptItem);
+        });
+    }
+
     sendButton.addEventListener('click', handleMessageSend);
 
     textInput.addEventListener('keydown', function (event) {
@@ -243,8 +273,8 @@ document.addEventListener('DOMContentLoaded', function () {
         loadTalk();
     });
 
-    settingsTab.addEventListener('click', function() {
-        loadSettings();
+    transcriptTab.addEventListener('click', function() {
+        loadTranscript();
     });
 
     mic.addEventListener('click', function () {
