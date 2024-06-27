@@ -14,5 +14,7 @@ Video Transcript Tab: Fetch the transcript of the current YouTube video.
 
 # DEMO:
 
-https://github.com/NudurupatiSurya/Guru-AI/assets/53263580/d7dcca7d-ed72-4d48-b593-f492cdf99f00
+https://github.com/NudurupatiSurya/Guru-AI/assets/53263580/3d155151-3aea-4e6e-9547-dc151904d468
+
+
 
